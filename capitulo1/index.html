@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL: Fuga da Mata do Piauí</title>
+  <link rel="stylesheet" href="/capitulo1/style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>SQL: Fuga da Mata do Piauí</h1>
+      <p class="subtitle">Capítulo 1 — Fome na mata</p>
+    </header>
+
+    <section class="card story">
+      <div class="badge">HISTÓRIA</div>
+      <p id="storyText">
+        Você acorda no meio da mata, fraco e com fome. Depois de caminhar entre as árvores,
+        encontra um cesto com frutas e um terminal antigo coberto de folhas.
+        <br><br>
+        O terminal parece ter registros em uma tabela chamada <b>frutas_encontradas</b>.
+        Nem tudo é seguro. Você precisa sobreviver.
+      </p>
+    </section>
+
+    <section class="card table-area">
+      <div class="row-title">
+        <h2>Saída do Terminal</h2>
+        <span class="hint">
+          Dica: tente executar um <b>SELECT</b> da tabela <b>frutas_encontradas</b>.
+        </span>
+      </div>
+
+      <div class="schema">
+        <b>Esquema:</b> frutas_encontradas (id, nome, origem, comestivel, alerta)
+      </div>
+
+      <div class="table-wrap" id="resultWrap" style="display:none;">
+        <table id="resultTable">
+          <thead>
+            <tr id="resultHead"></tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+
+      <p class="empty" id="emptyState">
+        Nenhum resultado ainda. Execute um <b>SELECT</b> no terminal pra ver os dados.
+      </p>
+    </section>
+
+    <section class="card terminal">
+      <div class="badge">TERMINAL SQL</div>
+
+      <p class="mission" id="missionText">
+        <b>MISSÃO:</b> Descubra quais frutas você encontrou. Comece listando o conteúdo da tabela.
+      </p>
+
+      <div class="sql-box">
+        <textarea id="sqlInput" spellcheck="false" placeholder="Digite seu SQL aqui..."></textarea>
+
+        <div class="actions">
+          <button id="runBtn">Executar</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+        </div>
+
+        <p class="example">
+          Exemplos:
+          <code>SELECT * FROM frutas_encontradas;</code>
+          <code>SELECT nome, origem FROM frutas_encontradas WHERE comestivel = 1;</code>
+        </p>
+      </div>
+
+      <div class="output">
+        <div class="output-head">
+          <span>Log</span>
+          <span id="statusPill" class="pill">Aguardando comando...</span>
+        </div>
+        <pre id="outputText">Digite um SELECT para continuar.</pre>
+      </div>
+    </section>
+
+    <section class="card next" id="nextCard" hidden>
+      <div class="badge ok">SUCESSO</div>
+      <h2>Você sobreviveu.</h2>
+      <p>
+        Você separou as frutas seguras e recuperou energia.
+        No chão, um mapa rasgado aparece… mas as coordenadas estão erradas.
+      </p>
+      <button id="nextBtn">Ir para a próxima fase</button>
+      <p class="small">
+        (Capítulo 2 será UPDATE nas coordenadas — quando tu pedir, eu faço igualzinho.)
+      </p>
+    </section>
+
+    <footer class="footer">
+      <span>Feito por Theus • Jogo narrativo SQL</span>
+    </footer>
+  </main>
+
+  <script src="/capitulo1/script.js"></script>
+</body>
+</html>

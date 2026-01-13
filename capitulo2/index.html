@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL: Fuga da Mata do Piauí — Capítulo 2</title>
+  <link rel="stylesheet" href="/capitulo2/style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>SQL: Fuga da Mata do Piauí</h1>
+      <p class="subtitle">Capítulo 2 — O caminho do rio</p>
+    </header>
+
+    <section class="card story">
+      <div class="badge">HISTÓRIA</div>
+      <p id="storyText">
+        Depois de comer as frutas, você recupera energia e decide andar.
+        No caminho, encontra uma casa de taipa antiga, abandonada. Você entra…
+        <br><br>
+        Lá dentro, acha um mapa velho com rios da região. Um nome te chama atenção: <b>Rio Canindé</b>.
+        Se ele estiver perto, seguir o curso do rio pode te levar a sinais de civilização.
+        <br><br>
+        Você encontra um terminal antigo funcionando. Ele guarda dados da região: <b>rios</b>, <b>peixes</b> e <b>rotas</b>.
+      </p>
+    </section>
+
+    <section class="card table-area">
+      <div class="row-title">
+        <h2>Saída do Terminal</h2>
+        <span class="hint" id="hintText">Nada aparece até você executar SQL.</span>
+      </div>
+
+      <div class="schema">
+        <b>Esquema:</b><br>
+        rios (id_rio, nome, distancia_km)<br>
+        peixes (id_peixe, nome, rio, perigo)<br>
+        rotas (id_rota, titulo, estrategia, destino, status)
+      </div>
+
+      <div class="table-wrap" id="resultWrap" style="display:none;">
+        <table id="resultTable">
+          <thead><tr id="resultHead"></tr></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+
+      <p class="empty" id="emptyState">
+        Nenhum resultado ainda. Comece com um <b>SELECT</b>.
+      </p>
+    </section>
+
+    <section class="card terminal">
+      <div class="badge">TERMINAL SQL</div>
+
+      <p class="mission" id="missionText">
+        <b>MISSÃO:</b> Veja os rios do mapa e descubra qual está mais perto. (Dica: <b>SELECT</b> na tabela <b>rios</b>)
+      </p>
+
+      <div class="sql-box">
+        <textarea id="sqlInput" spellcheck="false" placeholder="Digite seu SQL aqui..."></textarea>
+
+        <div class="actions">
+          <button id="runBtn">Executar</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+        </div>
+
+        <p class="example">
+          Exemplos (só guia):
+          <code>SELECT * FROM rios;</code>
+          <code>SELECT * FROM peixes WHERE rio = 'Canindé';</code>
+          <code>UPDATE rotas SET estrategia='acompanhar', destino='Rio Canindé' WHERE id_rota=1;</code>
+        </p>
+      </div>
+
+      <div class="output">
+        <div class="output-head">
+          <span>Log</span>
+          <span id="statusPill" class="pill">Aguardando comando...</span>
+        </div>
+        <pre id="outputText">Digite um SELECT para continuar.</pre>
+      </div>
+    </section>
+
+    <section class="card next" id="nextCard" hidden>
+      <div class="badge ok">SUCESSO</div>
+      <h2>Rota corrigida.</h2>
+      <p>
+        Você trocou a rota perigosa pela rota que acompanha o <b>Rio Canindé</b>.
+        Agora é só seguir o curso do rio em busca de civilização.
+      </p>
+      <button id="nextBtn">Ir para o Capítulo 3</button>
+      <p class="small">(Depois a gente faz o Capítulo 3 com DELETE ou TRIGGER 😈)</p>
+    </section>
+
+    <footer class="footer">
+      <span>Feito por Theus • Jogo narrativo SQL</span>
+    </footer>
+  </main>
+
+  <script src="/capitulo2/script.js"></script>
+</body>
+</html>
