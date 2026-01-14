@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL: Fuga da Mata do Piauí — Capítulo 3</title>
+  <link rel="stylesheet" href="/capitulo3/style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>SQL: Fuga da Mata do Piauí</h1>
+      <p class="subtitle">Capítulo 3 — O rancho e a comida da terra</p>
+    </header>
+
+    <section class="card story">
+      <div class="badge">HISTÓRIA</div>
+      <p id="storyText">
+        Seguindo o curso do Rio Canindé, você encontra fumaça no meio do mato… sinal de gente.
+        Você se aproxima e um cabra aparece do nada, com um facão na cintura.
+        <br><br>
+        <b>NPC:</b> “<b>Arriégua, homem!</b> O que tu tá fazendo aqui no mei do nada?”
+        <br>
+        <b>NPC:</b> “<b>Ô fih d’uma égua</b>, tu tá é perdido, visse?”
+        <br><br>
+        Ele te leva até um rancho. Tem um fogão de lenha e um terminal velho em cima de uma mesa.
+        <br><br>
+        <b>NPC:</b> “Se tu quer força pra sair dessa mata, come só o que é <b>da terra</b>.
+        Aqui tem coisa típica… e tem coisa de fora que eu não deixo nem tu encostar.”
+      </p>
+    </section>
+
+    <section class="card table-area">
+      <div class="row-title">
+        <h2>Saída do Terminal</h2>
+        <span class="hint" id="hintText">O terminal está pronto.</span>
+      </div>
+
+      <div class="schema">
+        <b>Esquema:</b><br>
+        npc (id_npc, nome)<br>
+        comidas (id_comida, nome, tipica, energia)<br>
+        itens_prato (id_item, id_comida, qtd)<br><br>
+
+        <b>VIEW:</b> cardapio_tipico (id_comida, nome, energia)<br>
+        <b>VIEW:</b> prato_atual (id_item, nome, qtd, energia_total)
+      </div>
+
+      <div class="table-wrap" id="resultWrap" style="display:none;">
+        <table id="resultTable">
+          <thead><tr id="resultHead"></tr></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+
+      <p class="empty" id="emptyState">
+        Nenhum resultado ainda.
+      </p>
+    </section>
+
+    <section class="card terminal">
+      <div class="badge">TERMINAL SQL</div>
+
+      <p class="mission" id="missionText">
+        <b>MISSÃO:</b> Descubra o nome desse morador usando o terminal.
+      </p>
+
+      <div class="sql-box">
+        <textarea id="sqlInput" spellcheck="false" placeholder="Digite seu SQL aqui..."></textarea>
+
+        <div class="actions">
+          <button id="runBtn">Executar</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div class="output">
+        <div class="output-head">
+          <span>Log</span>
+          <span id="statusPill" class="pill">Aguardando comando...</span>
+        </div>
+        <pre id="outputText">O homem cruza os braços e espera.</pre>
+      </div>
+    </section>
+
+    <section class="card next" id="nextCard" hidden>
+      <div class="badge ok">SUCESSO</div>
+      <h2>De bucho cheio e pronto pra sair.</h2>
+      <p id="finishText"></p>
+      <button id="nextBtn">Ir para o Capítulo 4</button>
+      <p class="small">(Capítulo 4 depois a gente decide 😈)</p>
+    </section>
+
+    <footer class="footer">
+      <span>Feito por Theus • Jogo narrativo SQL</span>
+    </footer>
+  </main>
+
+  <script src="/capitulo3/script.js"></script>
+</body>
+</html>
