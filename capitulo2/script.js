@@ -1,4 +1,6 @@
-// ======= Banco fake =======
+// ==========================
+// BANCO FAKE (Capítulo 2)
+// ==========================
 
 const rios = [
   { id_rio: 1, nome: "Parnaíba", distancia_km: 85 },
@@ -17,7 +19,7 @@ const peixes = [
   { id_peixe: 7, nome: "Mandis",   rio: "Canindé", perigo: 1 },
 ];
 
-const rotas = [
+const rotasDefault = () => ([
   {
     id_rota: 1,
     titulo: "Rota do mapa",
@@ -32,9 +34,13 @@ const rotas = [
     destino: "Seguir o curso do Rio Canindé (civilização)",
     status: "inativa"
   }
-];
+]);
 
-// ======= UI =======
+let rotas = rotasDefault();
+
+// ==========================
+// UI
+// ==========================
 
 const storyText   = document.querySelector("#storyText");
 const hintText    = document.querySelector("#hintText");
@@ -54,14 +60,16 @@ const emptyState  = document.querySelector("#emptyState");
 const resultHead  = document.querySelector("#resultHead");
 const resultBody  = document.querySelector("#resultBody");
 
-// Progressão:
-// 1) SELECT * FROM rios
-// 2) SELECT * FROM peixes WHERE rio='Canindé'
-//    -> mostra rotas automaticamente (guia)
-// 3) DELETE FROM rotas WHERE id_rota=1  (apagar rota perigosa)
-// 4) UPDATE rotas SET status='ativa' WHERE id_rota=2 (ativar rota segura)
+// ==========================
+// Progressão
+// ==========================
 
-let etapa = 1;
+let etapa = 1; // 1=rios, 2=peixes, 3=rotas, 4=ativar segura, vitória
+let switchBtn = null;
+
+// ==========================
+// Helpers
+// ==========================
 
 function setStatus(type, text){
   statusPill.classList.remove("ok","bad");
@@ -82,7 +90,25 @@ function extractAllQuoted(sqlRaw){
   return [...sqlRaw.matchAll(/'([^']+)'/g)].map(m => m[1]);
 }
 
+function extractNumberAfter(sqlN, key){
+  const m = sqlN.match(new RegExp(`${key}\\s*=\\s*(\\d+)`));
+  return m ? Number(m[1]) : null;
+}
+
+function resetResult(){
+  resultWrap.style.display = "none";
+  emptyState.style.display = "block";
+  resultHead.innerHTML = "";
+  resultBody.innerHTML = "";
+}
+
 function showTable(rows){
+  if(!rows || rows.length === 0){
+    resetResult();
+    emptyState.textContent = "Sem resultados.";
+    return;
+  }
+
   emptyState.style.display = "none";
   resultWrap.style.display = "block";
 
@@ -92,13 +118,6 @@ function showTable(rows){
     const tds = cols.map(c => `<td>${r[c]}</td>`).join("");
     return `<tr>${tds}</tr>`;
   }).join("");
-}
-
-function resetResult(){
-  resultWrap.style.display = "none";
-  emptyState.style.display = "block";
-  resultHead.innerHTML = "";
-  resultBody.innerHTML = "";
 }
 
 function fail(msg){
@@ -112,166 +131,283 @@ function ok(msg){
   outputText.textContent = msg;
 }
 
-// ======= SELECT =======
+function rioMaisPerto(){
+  return [...rios].sort((a,b) => a.distancia_km - b.distancia_km)[0];
+}
+
+function isCaninde(row){
+  const n = String(row?.nome ?? "").toLowerCase();
+  return n.includes("canind");
+}
+
+function rowsContainCaninde(rows){
+  return (rows || []).some(r => isCaninde(r) || String(r?.rio ?? "").toLowerCase().includes("canind"));
+}
+
+function isDangerFish(p){
+  return p.perigo === 1;
+}
+
+function safeRoute(){
+  return rotas.find(r => r.estrategia.toLowerCase().includes("acompan"));
+}
+
+function isSafeRouteActive(){
+  const r = safeRoute();
+  if(!r) return false;
+  return String(r.status).toLowerCase().includes("ativa");
+}
+
+// ==========================
+// ✅ Botão "Ver peixes do Canindé"
+// - Só aparece quando etapa=2
+// - Some quando etapa>=3
+// ==========================
+
+function createSwitchButton(){
+  if(switchBtn) return;
+
+  switchBtn = document.createElement("button");
+  switchBtn.id = "switchTableBtn";
+  switchBtn.className = "ghost";
+  switchBtn.style.marginLeft = "10px";
+  switchBtn.textContent = "Ver peixes do Canindé";
+
+  const actions = document.querySelector(".actions");
+  actions.appendChild(switchBtn);
+
+  switchBtn.addEventListener("click", () => {
+    const peixesCaninde = peixes.filter(p => p.rio.toLowerCase().includes("canind"));
+    showTable(peixesCaninde);
+
+    hintText.textContent = "Agora você tá vendo os registros do Rio Canindé.";
+    ok("Tabela trocada: peixes do Canindé.");
+  });
+}
+
+function showSwitchButton(){
+  createSwitchButton();
+  switchBtn.style.display = "inline-flex";
+}
+
+function hideSwitchButton(){
+  if(!switchBtn) return;
+  switchBtn.style.display = "none";
+}
+
+// ==========================
+// SELECT (flexível)
+// ==========================
 
 function runSelect(sqlRaw, sqlN){
+  // rios
   if(contains(sqlN, "from rios")){
-    showTable(rios);
+    let rows = [...rios];
 
-    if(etapa === 1){
+    if(contains(sqlN, "order by") && contains(sqlN, "distancia_km")){
+      const asc = !contains(sqlN, "desc");
+      rows.sort((a,b) => asc ? a.distancia_km - b.distancia_km : b.distancia_km - a.distancia_km);
+    }
+
+    if(contains(sqlN, "limit 1")){
+      rows = [rows.sort((a,b) => a.distancia_km - b.distancia_km)[0]];
+    }
+
+    if(contains(sqlN, "min(") && contains(sqlN, "distancia_km")){
+      const p = rioMaisPerto();
+      rows = [{ min_distancia_km: p.distancia_km }];
+    }
+
+    showTable(rows);
+
+    const discovered =
+      rowsContainCaninde(rows) ||
+      (contains(sqlN, "min(") && contains(sqlN, "distancia_km")) ||
+      (sqlN === "select * from rios;" || sqlN === "select * from rios");
+
+    if(etapa === 1 && discovered){
       etapa = 2;
-      const perto = [...rios].sort((a,b) => a.distancia_km - b.distancia_km)[0];
+      const perto = rioMaisPerto();
 
       storyText.innerHTML =
-        `Você confere o mapa e conclui que o rio mais perto é <b>${perto.nome}</b> (<b>${perto.distancia_km} km</b>).
-        Você decide ir até ele.
+        `Você analisa o mapa pelo terminal e percebe que o rio mais perto é <b>${perto.nome}</b> (<b>${perto.distancia_km} km</b>).
         <br><br>
-        Depois de um tempo andando, você ouve água correndo… você chegou ao <b>Rio Canindé</b>.
-        A água está agitada demais. Você precisa verificar o que tem ali.`;
+        Você decide seguir nessa direção. Depois de um tempo andando, ouve água correndo…
+        você chegou ao <b>Rio Canindé</b>.
+        <br><br>
+        A correnteza não parece segura. Antes de atravessar, você precisa entender o que vive ali.`;
 
       missionText.innerHTML =
-        "<b>MISSÃO:</b> Analise o Rio Canindé e veja quais espécies aparecem. (Dica: tabela <b>peixes</b> com WHERE rio='Canindé')";
-      hintText.textContent = "Agora investigue o rio pelo terminal.";
+        "<b>MISSÃO:</b> Analise os peixes do Rio Canindé e veja se existe perigo.";
+      hintText.textContent = "Quando quiser, clique no botão pra ver os peixes do Canindé.";
 
-      ok(`Rios listados. O mais perto é ${perto.nome}. Agora investigue o Rio Canindé.`);
-    } else {
-      ok("Rios listados.");
+      // ✅ agora o botão aparece SÓ aqui
+      showSwitchButton();
+
+      ok("Rios exibidos. Agora você pode puxar os peixes quando quiser.");
+      return;
     }
+
+    ok("Rios exibidos.");
     return;
   }
 
+  // peixes
   if(contains(sqlN, "from peixes")){
-    let rows = peixes;
+    let rows = [...peixes];
 
     if(contains(sqlN, "where") && contains(sqlN, "rio")){
       const quoted = extractAllQuoted(sqlRaw);
       const rio = quoted[0] ?? null;
       if(rio){
-        rows = peixes.filter(p => p.rio.toLowerCase() === rio.toLowerCase());
+        rows = rows.filter(p => p.rio.toLowerCase().includes(rio.toLowerCase()));
       }
+    }
+
+    if(contains(sqlN, "where") && contains(sqlN, "perigo")){
+      if(/perigo\s*=\s*1/.test(sqlN) || /perigo\s*!=\s*0/.test(sqlN) || /perigo\s*<>\s*0/.test(sqlN)){
+        rows = rows.filter(p => p.perigo === 1);
+      }
+      if(/perigo\s*=\s*0/.test(sqlN)){
+        rows = rows.filter(p => p.perigo === 0);
+      }
+    }
+
+    const like = sqlRaw.match(/nome\s+like\s+'([^']+)'/i);
+    if(like){
+      const pattern = like[1].replace(/%/g, "").toLowerCase();
+      rows = rows.filter(p => p.nome.toLowerCase().includes(pattern));
     }
 
     showTable(rows);
 
-    if(etapa === 2){
-      const viuCaninde = rows.some(p => p.rio.toLowerCase() === "canindé".toLowerCase());
-      if(!viuCaninde){
-        return fail(
-          "Você ainda não analisou o Rio Canindé.\n" +
-          "Dica: SELECT * FROM peixes WHERE rio = 'Canindé';"
-        );
-      }
+    if(etapa < 2){
+      return fail("Antes de mexer nos peixes, você ainda não provou que descobriu o rio mais perto.");
+    }
 
+    const sawCaninde = rowsContainCaninde(rows) || contains(sqlN, "canind");
+    const sawDanger = rows.some(isDangerFish) || /perigo\s*=\s*1/.test(sqlN) || /perigo\s*!=\s*0/.test(sqlN);
+
+    if(etapa === 2 && sawCaninde && sawDanger){
       etapa = 3;
 
-      storyText.innerHTML =
-        `Você observa o rio com atenção… e identifica perigo:
-        <b>arraia</b>, <b>piranhas</b>, <b>puraquê</b>, <b>bagres</b> e <b>mandis</b>.
-        <br><br>
-        A travessia direta é arriscada. No sistema, existe uma rota que tenta atravessar…
-        e uma rota alternativa que acompanha o curso do rio.`;
+      // ✅ passou da missão dos peixes -> botão some
+      hideSwitchButton();
 
-      // guia: mostra rotas automaticamente
-      showTable(rotas);
+      storyText.innerHTML =
+        `Você observa o rio com atenção… e percebe que tem coisa perigosa na água.
+        <br><br>
+        A travessia direta parece uma má ideia. Pelo mapa, existe uma rota que tenta atravessar…
+        e outra que acompanha o curso do rio.`;
 
       missionText.innerHTML =
-        "<b>MISSÃO:</b> Apague a rota perigosa que tenta <b>atravessar</b> (id_rota=1) usando <b>DELETE</b> (com WHERE).";
-      hintText.textContent = "Agora você vê as rotas na tela.";
+        "<b>MISSÃO:</b> Verifique as rotas e elimine a travessia perigosa.";
+      hintText.textContent = "Talvez exista mais de um jeito de resolver…";
 
-      ok("Perigo detectado. Agora apague a rota de travessia (id_rota=1).");
-    } else {
-      ok("Peixes listados.");
+      ok("Perigo confirmado. Agora lide com as rotas.");
+      return;
     }
+
+    ok("Peixes exibidos.");
     return;
   }
 
+  // rotas
   if(contains(sqlN, "from rotas")){
     showTable(rotas);
-    ok("Rotas listadas.");
+    ok(etapa < 3 ? "Rotas exibidas." : "Agora decide: atravessar ou acompanhar?");
     return;
   }
 
-  fail("SELECT não reconhecido. Dica: comece com SELECT * FROM rios;");
+  fail("SELECT não reconhecido. Tente consultar rios, peixes ou rotas.");
 }
 
-// ======= DELETE =======
+// ==========================
+// DELETE (flexível)
+// ==========================
 
 function runDelete(sqlRaw, sqlN){
   if(!contains(sqlN, "delete from rotas")){
     return fail("Nesse capítulo, o DELETE aceito é na tabela rotas.");
   }
+  if(etapa < 3) return fail("Ainda não está na hora de mexer em rotas.");
+  if(!contains(sqlN, "where")) return fail("Faltou WHERE.");
 
-  if(!contains(sqlN, "where") || !contains(sqlN, "id_rota")){
-    return fail("Faltou WHERE id_rota=... (pra não apagar tudo).");
+  if(contains(sqlN, "id_rota")){
+    const id = extractNumberAfter(sqlN, "id_rota");
+    if(!id) return fail("Não consegui ler o id_rota no WHERE.");
+
+    const idx = rotas.findIndex(r => r.id_rota === id);
+    if(idx === -1) return fail("Esse id_rota não existe.");
+
+    const isTrav = rotas[idx].estrategia.toLowerCase().includes("atravess");
+    if(!(id === 1 || isTrav)) return fail("A perigosa é a de travessia.");
+
+    rotas.splice(idx, 1);
+    showTable(rotas);
+
+    etapa = 4;
+    missionText.innerHTML = "<b>MISSÃO:</b> Garanta que a rota de acompanhar o rio esteja <b>ativa</b>.";
+    ok("Travessia removida. Agora deixe a rota segura ativa.");
+    return;
   }
 
-  const idMatch = sqlN.match(/id_rota\s*=\s*(\d+)/);
-  const id = idMatch ? Number(idMatch[1]) : null;
-  if(!id) return fail("Não consegui ler o id_rota do WHERE.");
-
-  if(etapa < 3){
-    return fail(
-      "Antes do DELETE, você precisa ver os rios e analisar os peixes do Canindé.\n" +
-      "Dica: SELECT * FROM rios; depois SELECT * FROM peixes WHERE rio='Canindé';"
-    );
-  }
-
-  const idx = rotas.findIndex(r => r.id_rota === id);
-  if(idx === -1) return fail("Esse id_rota não existe.");
-
-  // regra da história: tem que apagar a rota 1 (travessia)
-  if(id !== 1){
-    return fail("Você até pode apagar outras rotas, mas a perigosa é a id_rota=1 (travessia).");
-  }
-
-  rotas.splice(idx, 1);
-  showTable(rotas);
-
-  etapa = 4;
-  missionText.innerHTML =
-    "<b>MISSÃO:</b> Agora ative a rota segura (id_rota=2) colocando <b>status='ativa'</b> com <b>UPDATE</b>.";
-  ok("Boa! Você removeu a rota de travessia. Agora ative a rota alternativa (id_rota=2).");
+  fail("DELETE aceito, mas faltou um WHERE útil (id_rota).");
 }
 
-// ======= UPDATE =======
+// ==========================
+// UPDATE (flexível)
+// ==========================
 
 function runUpdate(sqlRaw, sqlN){
-  if(!contains(sqlN, "update rotas")){
-    return fail("Nesse capítulo, o UPDATE aceito é na tabela rotas.");
-  }
-  if(!contains(sqlN, "set")) return fail("Faltou SET no UPDATE.");
-  if(!contains(sqlN, "where") || !contains(sqlN, "id_rota"))
-    return fail("Faltou WHERE id_rota=... (pra não atualizar tudo).");
+  if(!contains(sqlN, "update rotas")) return fail("Nesse capítulo, o UPDATE aceito é na tabela rotas.");
+  if(!contains(sqlN, "set")) return fail("Faltou SET.");
+  if(!contains(sqlN, "where")) return fail("Faltou WHERE.");
+  if(etapa < 3) return fail("Ainda não é hora de mexer nas rotas.");
 
-  const idMatch = sqlN.match(/id_rota\s*=\s*(\d+)/);
-  const id = idMatch ? Number(idMatch[1]) : null;
-  if(!id) return fail("Não consegui ler o id_rota do WHERE.");
-
-  const rota = rotas.find(r => r.id_rota === id);
-  if(!rota) return fail("Esse id_rota não existe.");
-
-  if(etapa < 4){
-    return fail(
-      "Antes do UPDATE final, você precisa apagar a rota perigosa.\n" +
-      "Dica: DELETE FROM rotas WHERE id_rota=1;"
-    );
+  let rota = null;
+  if(contains(sqlN, "id_rota")){
+    const id = extractNumberAfter(sqlN, "id_rota");
+    if(!id) return fail("Não consegui ler o id_rota no WHERE.");
+    rota = rotas.find(r => r.id_rota === id);
+    if(!rota) return fail("Esse id_rota não existe.");
+  } else {
+    return fail("Use WHERE com id_rota.");
   }
 
-  // atualizar status (obrigatório)
-  if(!contains(sqlN, "status")){
-    return fail("Nesse momento, você precisa atualizar o status. Ex: SET status='ativa'");
+  const setPart = sqlRaw.split(/set/i)[1]?.split(/where/i)[0] ?? "";
+  const setPairs = setPart.split(",").map(s => s.trim()).filter(Boolean);
+
+  for(const pair of setPairs){
+    const m = pair.match(/^(\w+)\s*=\s*'([^']+)'/i);
+    if(m){
+      const col = m[1].toLowerCase();
+      const val = m[2];
+      if(col in rota) rota[col] = val;
+      continue;
+    }
+    const m2 = pair.match(/^(\w+)\s*=\s*([a-zA-Z_]+)/);
+    if(m2){
+      const col = m2[1].toLowerCase();
+      const val = m2[2];
+      if(col in rota) rota[col] = val;
+    }
   }
-
-  const quoted = extractAllQuoted(sqlRaw);
-  const val = quoted[0] ?? null;
-  if(!val) return fail("Use aspas no status: status='ativa'");
-
-  rota.status = val;
 
   showTable(rotas);
 
-  // vitória: id 2 precisa ficar ativa
-  if(id === 2 && (rota.status || "").toLowerCase().includes("ativa")){
+  if(etapa === 3){
+    const trav = rotas.find(r => r.estrategia.toLowerCase().includes("atravess"));
+    const travOk = !trav || String(trav.status).toLowerCase().includes("inativ");
+    if(travOk){
+      etapa = 4;
+      missionText.innerHTML = "<b>MISSÃO:</b> Garanta que a rota de acompanhar o rio esteja <b>ativa</b>.";
+      ok("Travessia fora do jogo. Agora ative a rota segura.");
+      return;
+    }
+  }
+
+  if(etapa >= 4 && isSafeRouteActive()){
     setStatus("ok", "Concluído ✅");
     outputText.textContent =
 `Perfeito. A rota segura agora está ativa.
@@ -279,28 +415,23 @@ Você segue acompanhando o curso do Rio Canindé em busca de sinais de civiliza�
 
 Capítulo 2 concluído.`;
 
-    storyText.innerHTML =
-      `Você respira fundo e começa a caminhar pela margem.
-      O som do rio vira seu guia. Entre as árvores, você pensa:
-      <b>se existe água, existe gente.</b>
-      <br><br>
-      Você segue o <b>Rio Canindé</b>…`;
-
     nextCard.hidden = false;
     nextCard.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
 
-  fail("Quase. A ideia é deixar a rota id_rota=2 com status='ativa'.");
+  ok("Atualização feita.");
 }
 
-// ======= Execução =======
+// ==========================
+// Execução principal
+// ==========================
 
 runBtn.addEventListener("click", () => {
   const raw = sqlInput.value.trim();
   const sqlN = normalize(raw);
 
-  if(!sqlN) return fail("Digita um comando SQL primeiro.");
+  if(!sqlN) return fail("...");
 
   if(sqlN.startsWith("select")) return runSelect(raw, sqlN);
   if(sqlN.startsWith("delete")) return runDelete(raw, sqlN);
@@ -310,32 +441,17 @@ runBtn.addEventListener("click", () => {
 });
 
 resetBtn.addEventListener("click", () => {
-  // reset rotas
-  rotas.length = 0;
-  rotas.push(
-    {
-      id_rota: 1,
-      titulo: "Rota do mapa",
-      estrategia: "atravessar",
-      destino: "Rio Canindé (travessia direta)",
-      status: "ativa"
-    },
-    {
-      id_rota: 2,
-      titulo: "Rota alternativa",
-      estrategia: "acompanhar",
-      destino: "Seguir o curso do Rio Canindé (civilização)",
-      status: "inativa"
-    }
-  );
-
+  rotas = rotasDefault();
   etapa = 1;
+
+  // ✅ botão some no reset
+  hideSwitchButton();
+
   sqlInput.value = "";
   setStatus("", "Aguardando comando...");
-  outputText.textContent = "Digite um SELECT para continuar.";
-  hintText.textContent = "Nada aparece até você executar SQL.";
-  missionText.innerHTML =
-    "<b>MISSÃO:</b> Veja os rios do mapa e descubra qual está mais perto. (Dica: SELECT na tabela <b>rios</b>)";
+  outputText.textContent = "...";
+  hintText.textContent = "O terminal está pronto.";
+  missionText.innerHTML = "<b>MISSÃO:</b> Descubra, pelo terminal, qual rio do mapa está mais perto.";
   nextCard.hidden = true;
 
   storyText.innerHTML =
@@ -351,9 +467,11 @@ resetBtn.addEventListener("click", () => {
 });
 
 nextBtn.addEventListener("click", () => {
-  alert("Capítulo 3 vem depois 😄\nQuando tu pedir, eu faço com TRIGGER ou PROCEDURE!");
+  window.location.href = "/capitulo3/index.html";
 });
 
 // estado inicial
+createSwitchButton();
+hideSwitchButton();
 resetResult();
 sqlInput.value = "";

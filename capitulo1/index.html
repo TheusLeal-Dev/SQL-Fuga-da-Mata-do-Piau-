@@ -27,9 +27,7 @@
     <section class="card table-area">
       <div class="row-title">
         <h2>Saída do Terminal</h2>
-        <span class="hint">
-          Dica: tente executar um <b>SELECT</b> da tabela <b>frutas_encontradas</b>.
-        </span>
+        <span class="hint" id="hintText">O terminal está pronto.</span>
       </div>
 
       <div class="schema">
@@ -46,7 +44,7 @@
       </div>
 
       <p class="empty" id="emptyState">
-        Nenhum resultado ainda. Execute um <b>SELECT</b> no terminal pra ver os dados.
+        Nenhum resultado ainda.
       </p>
     </section>
 
@@ -54,7 +52,7 @@
       <div class="badge">TERMINAL SQL</div>
 
       <p class="mission" id="missionText">
-        <b>MISSÃO:</b> Descubra quais frutas você encontrou. Comece listando o conteúdo da tabela.
+        <b>MISSÃO:</b> Use o terminal pra entender o que tem nesse cesto.
       </p>
 
       <div class="sql-box">
@@ -64,12 +62,6 @@
           <button id="runBtn">Executar</button>
           <button class="ghost" id="resetBtn">Reset</button>
         </div>
-
-        <p class="example">
-          Exemplos:
-          <code>SELECT * FROM frutas_encontradas;</code>
-          <code>SELECT nome, origem FROM frutas_encontradas WHERE comestivel = 1;</code>
-        </p>
       </div>
 
       <div class="output">
@@ -77,7 +69,7 @@
           <span>Log</span>
           <span id="statusPill" class="pill">Aguardando comando...</span>
         </div>
-        <pre id="outputText">Digite um SELECT para continuar.</pre>
+        <pre id="outputText">...</pre>
       </div>
     </section>
 
@@ -86,16 +78,14 @@
       <h2>Você sobreviveu.</h2>
       <p>
         Você separou as frutas seguras e recuperou energia.
-        No chão, um mapa rasgado aparece… mas as coordenadas estão erradas.
+        No chão, um mapa rasgado aparece… e você decide seguir viagem.
       </p>
-      <button id="nextBtn">Ir para a próxima fase</button>
-      <p class="small">
-        (Capítulo 2 será UPDATE nas coordenadas — quando tu pedir, eu faço igualzinho.)
-      </p>
+      <button id="nextBtn">Ir para o Capítulo 2</button>
+      <p class="small"></p>
     </section>
 
     <footer class="footer">
-      <span>Feito por Theus • Jogo narrativo SQL</span>
+      <span></span>
     </footer>
   </main>
 

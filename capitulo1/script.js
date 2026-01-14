@@ -1,20 +1,27 @@
-const frutas = [
-  { id: 1,  nome: "Coco",     origem: "coqueiro",  comestivel: 1, alerta: "ok" },
-  { id: 2,  nome: "Banana",   origem: "bananeira", comestivel: 1, alerta: "ok" },
-  { id: 3,  nome: "Caju",     origem: "cajueiro",  comestivel: 1, alerta: "ok" },
-  { id: 4,  nome: "Manga",    origem: "mangueira", comestivel: 1, alerta: "ok" },
-  { id: 5,  nome: "Pitomba",  origem: "mato",      comestivel: 1, alerta: "ok" },
-  { id: 6,  nome: "Umbu",     origem: "mato",      comestivel: 1, alerta: "ok" },
-  { id: 7,  nome: "Cajá",     origem: "mato",      comestivel: 1, alerta: "ok" },
-  { id: 8,  nome: "Murici",   origem: "mato",      comestivel: 1, alerta: "ok" },
-  { id: 9,  nome: "Buriti",   origem: "vereda",    comestivel: 1, alerta: "ok" },
+// ==========================
+// BANCO FAKE (Capítulo 1)
+// ==========================
 
-  // inventadas (não come)
-  { id: 10, nome: "Fruta-olho-de-sapo", origem: "mato", comestivel: 0, alerta: "desconhecida" },
-  { id: 11, nome: "Baguinha preta",     origem: "mato", comestivel: 0, alerta: "amarga" },
-  { id: 12, nome: "Cipó-leitoso",       origem: "mato", comestivel: 0, alerta: "irritante" },
-  { id: 13, nome: "Carocinho vermelho", origem: "mato", comestivel: 0, alerta: "tóxica" },
+const frutas_encontradas = [
+  { id: 1, nome: "Coco",      origem: "Piauí", comestivel: 1, alerta: 0 },
+  { id: 2, nome: "Banana",    origem: "Piauí", comestivel: 1, alerta: 0 },
+  { id: 3, nome: "Pitomba",   origem: "Piauí", comestivel: 1, alerta: 0 },
+  { id: 4, nome: "Caju",      origem: "Piauí", comestivel: 1, alerta: 0 },
+  { id: 5, nome: "Manga",     origem: "Piauí", comestivel: 1, alerta: 0 },
+
+  // “perigosas / não comer”
+  { id: 6, nome: "Fruta Desconhecida", origem: "Mata",  comestivel: 0, alerta: 1 },
+  { id: 7, nome: "Baga Vermelha",      origem: "Mata",  comestivel: 0, alerta: 1 },
+  { id: 8, nome: "CoguMelo",           origem: "Mata",  comestivel: 0, alerta: 1 },
 ];
+
+// ==========================
+// UI
+// ==========================
+
+const storyText   = document.querySelector("#storyText");
+const hintText    = document.querySelector("#hintText");
+const missionText = document.querySelector("#missionText");
 
 const sqlInput   = document.querySelector("#sqlInput");
 const runBtn     = document.querySelector("#runBtn");
@@ -22,65 +29,60 @@ const resetBtn   = document.querySelector("#resetBtn");
 const outputText = document.querySelector("#outputText");
 const statusPill = document.querySelector("#statusPill");
 
-const missionText = document.querySelector("#missionText");
-const nextCard    = document.querySelector("#nextCard");
-const nextBtn     = document.querySelector("#nextBtn");
+const nextCard   = document.querySelector("#nextCard");
+const nextBtn    = document.querySelector("#nextBtn");
 
-// resultado (tabela do terminal)
-const resultWrap  = document.querySelector("#resultWrap");
-const emptyState  = document.querySelector("#emptyState");
-const resultHead  = document.querySelector("#resultHead");
-const resultBody  = document.querySelector("#resultBody");
+const resultWrap = document.querySelector("#resultWrap");
+const emptyState = document.querySelector("#emptyState");
+const resultHead = document.querySelector("#resultHead");
+const resultBody = document.querySelector("#resultBody");
 
+// ==========================
+// Progressão
+// ==========================
+// etapa 1: qualquer SELECT em frutas_encontradas (pra “descobrir” a tabela)
+// etapa 2: selecionar só frutas seguras (várias formas aceitas)
 let etapa = 1;
-// 1: descobrir frutas (SELECT ... FROM frutas_encontradas)
-// 2: filtrar comestíveis (WHERE comestivel = 1)
+
+// ==========================
+// Helpers
+// ==========================
 
 function setStatus(type, text){
-  statusPill.classList.remove("ok", "bad");
+  statusPill.classList.remove("ok","bad");
   if(type === "ok") statusPill.classList.add("ok");
   if(type === "bad") statusPill.classList.add("bad");
   statusPill.textContent = text;
 }
 
-function normalize(sql){
-  return sql.toLowerCase().replace(/\s+/g, " ").trim();
+function ok(msg){
+  setStatus("ok","OK ✅");
+  outputText.textContent = msg;
 }
 
-function isSelect(sqlN){
-  return sqlN.startsWith("select");
+function fail(msg){
+  setStatus("bad","Não foi ❌");
+  outputText.textContent = msg;
+  nextCard.hidden = true;
 }
 
-function isFromFrutas(sqlN){
-  return sqlN.includes("from frutas_encontradas");
+function resetResult(){
+  resultWrap.style.display = "none";
+  emptyState.style.display = "block";
+  resultHead.innerHTML = "";
+  resultBody.innerHTML = "";
 }
 
-function hasWhere(sqlN){
-  return sqlN.includes(" where ");
-}
-
-function hasComestivelFilter(sqlN){
-  const patterns = [
-    /where .*comestivel\s*=\s*1/,
-    /where .*comestivel\s*==\s*1/,
-    /where .*comestivel\s*!=\s*0/,
-    /where .*comestivel\s*<>\s*0/,
-    /where .*comestivel\s*>\s*0/,
-  ];
-  return patterns.some(r => r.test(sqlN));
-}
-
-function simulate(sqlN){
-  if(hasComestivelFilter(sqlN)) return frutas.filter(f => f.comestivel === 1);
-  return frutas;
-}
-
-function renderResultTable(rows){
+function showTable(rows){
+  if(!rows || rows.length === 0){
+    resetResult();
+    emptyState.textContent = "Sem resultados.";
+    return;
+  }
   emptyState.style.display = "none";
   resultWrap.style.display = "block";
 
-  const cols = Object.keys(rows[0] ?? { id: "", nome: "", origem: "", comestivel: "", alerta: "" });
-
+  const cols = Object.keys(rows[0] ?? {});
   resultHead.innerHTML = cols.map(c => `<th>${c}</th>`).join("");
   resultBody.innerHTML = rows.map(r => {
     const tds = cols.map(c => `<td>${r[c]}</td>`).join("");
@@ -88,109 +90,206 @@ function renderResultTable(rows){
   }).join("");
 }
 
-function successStep1(rows){
-  setStatus("ok", "Boa! ✅");
-  renderResultTable(rows);
-
-  outputText.textContent =
-`Você listou o que tem no cesto.
-Agora vem a parte perigosa: nem tudo aí é seguro.
-
-MISSÃO NOVA:
-- selecione apenas as frutas SEGURAS (filtrando a coluna comestivel).`;
-
-  etapa = 2;
-  missionText.innerHTML =
-    "<b>MISSÃO:</b> Agora filtre e liste apenas as frutas que você pode comer (sem pegar as perigosas).";
+function normalize(sql){
+  return sql.toLowerCase().replace(/\s+/g," ").trim();
 }
 
-function successStep2(rows){
-  setStatus("ok", "Sobreviveu ✅");
-  renderResultTable(rows);
-
-  outputText.textContent =
-`Você separou só o que é seguro e recuperou energia.
-O estômago para de doer… e você consegue pensar.
-
-Você vê um mapa rasgado no chão… mas as coordenadas estão erradas.`;
-
-  nextCard.hidden = false;
-  nextCard.scrollIntoView({ behavior: "smooth", block: "start" });
+function hasFrom(sqlN, table){
+  return sqlN.includes(`from ${table}`) || sqlN.includes(`from ${table};`);
 }
 
-function fail(msg){
-  setStatus("bad", "Não foi ❌");
-  outputText.textContent = msg;
-  nextCard.hidden = true;
+function pickColumns(rows, colsRequested){
+  // se colsRequested for null => retorna tudo
+  if(!colsRequested) return rows;
+
+  // colsRequested = ["nome","origem"] etc
+  return rows.map(r => {
+    const obj = {};
+    colsRequested.forEach(c => {
+      if(c in r) obj[c] = r[c];
+    });
+    return obj;
+  });
 }
 
-runBtn.addEventListener("click", () => {
-  const sql = sqlInput.value;
-  const sqlN = normalize(sql);
+function parseSelectColumns(sqlN){
+  // pega entre "select" e "from"
+  const m = sqlN.match(/^select\s+(.+)\s+from\s+/);
+  if(!m) return null;
+  const part = m[1].trim();
+  if(part === "*" || part.includes("*")) return null;
 
-  if(!sqlN) return fail("Digita um comando SQL primeiro.");
+  // remove DISTINCT se tiver
+  const cleaned = part.replace(/^distinct\s+/,"").trim();
+  // split simples por vírgula
+  const cols = cleaned.split(",").map(s => s.trim());
+  // remove aliases "as"
+  return cols.map(c => c.split(" as ")[0].trim());
+}
 
-  if(!isSelect(sqlN)){
-    return fail("Nesse capítulo, o terminal só entende SELECT.");
+function isSafeRow(r){
+  return r.comestivel === 1 && r.alerta === 0;
+}
+
+// aceita várias formas de “solução”
+function queryLooksLikeSafeFilter(sqlN){
+  // soluções comuns
+  const patterns = [
+    /where\s+comestivel\s*=\s*1/,
+    /where\s+comestivel\s*!=\s*0/,
+    /where\s+comestivel\s*<>\s*0/,
+    /where\s+alerta\s*=\s*0/,
+    /where\s+alerta\s*!=\s*1/,
+    /where\s+alerta\s*<>\s*1/,
+    /where\s+comestivel\s*=\s*1\s+and\s+alerta\s*=\s*0/,
+    /where\s+alerta\s*=\s*0\s+and\s+comestivel\s*=\s*1/,
+    /where\s+nome\s+not\s+in\s*\(/,
+    /where\s+nome\s+!=\s*'/,
+    /where\s+nome\s*<>\s*'/,
+  ];
+
+  return patterns.some(rx => rx.test(sqlN));
+}
+
+function applyVerySimpleWhere(sqlRaw, sqlN, rows){
+  // NÃO é um SQL parser completo.
+  // Só filtra o básico pra deixar o jogo flexível sem travar.
+
+  if(!sqlN.includes("where")) return rows;
+
+  // 1) comestivel = 1
+  if(/comestivel\s*=\s*1/.test(sqlN) || /comestivel\s*!=\s*0/.test(sqlN) || /comestivel\s*<>\s*0/.test(sqlN)){
+    rows = rows.filter(r => r.comestivel === 1);
   }
 
-  if(!isFromFrutas(sqlN)){
-    return fail(
-      "O terminal parece ter dados em uma tabela chamada frutas_encontradas.\n" +
-      "Tenta algo tipo:\nSELECT * FROM frutas_encontradas;"
-    );
+  // 2) alerta = 0
+  if(/alerta\s*=\s*0/.test(sqlN) || /alerta\s*!=\s*1/.test(sqlN) || /alerta\s*<>\s*1/.test(sqlN)){
+    rows = rows.filter(r => r.alerta === 0);
   }
 
-  const rows = simulate(sqlN);
+  // 3) nome NOT IN ('x','y')
+  const notIn = sqlRaw.match(/nome\s+not\s+in\s*\(([^)]+)\)/i);
+  if(notIn){
+    const inside = notIn[1];
+    const quoted = [...inside.matchAll(/'([^']+)'/g)].map(m => m[1].toLowerCase());
+    rows = rows.filter(r => !quoted.includes(r.nome.toLowerCase()));
+  }
 
-  // ETAPA 1: qualquer SELECT FROM frutas_encontradas vale (mesmo sem WHERE)
+  // 4) nome != 'x' ou nome <> 'x' (só 1)
+  const neq = sqlRaw.match(/nome\s*(!=|<>)\s*'([^']+)'/i);
+  if(neq){
+    const val = neq[2].toLowerCase();
+    rows = rows.filter(r => r.nome.toLowerCase() !== val);
+  }
+
+  return rows;
+}
+
+// ==========================
+// Execução SELECT
+// ==========================
+
+function runSelect(sqlRaw, sqlN){
+  if(!hasFrom(sqlN, "frutas_encontradas")){
+    return fail("O terminal não encontrou essa tabela.");
+  }
+
+  // base
+  let rows = [...frutas_encontradas];
+
+  // aplica where simples
+  rows = applyVerySimpleWhere(sqlRaw, sqlN, rows);
+
+  // aplica colunas
+  const cols = parseSelectColumns(sqlN);
+  const projected = pickColumns(rows, cols);
+
+  showTable(projected);
+
+  // progressão
   if(etapa === 1){
-    // se ele já filtrar certo direto, passa
-    if(hasComestivelFilter(sqlN)) return successStep2(rows);
-    return successStep1(rows);
+    etapa = 2;
+
+    hintText.textContent = "Você sente o estômago roncar…";
+    missionText.innerHTML =
+      "<b>MISSÃO:</b> Selecione apenas as frutas seguras pra comer.";
+
+    ok("Agora você já sabe o que tem no cesto. Só falta separar o que dá pra comer.");
+    return;
   }
 
-  // ETAPA 2: exige filtro comestivel
   if(etapa === 2){
-    if(!hasWhere(sqlN)){
-      return fail(
-        "Você listou tudo de novo… perigoso.\n" +
-        "Use WHERE para filtrar só as frutas seguras.\n" +
-        "Dica: WHERE comestivel = 1"
-      );
+    // se query parece filtrar seguro e o resultado só tem seguros e pelo menos 2 itens
+    const originalFiltered = rows; // rows já está filtrado na estrutura completa
+
+    const allSafe = originalFiltered.length > 0 && originalFiltered.every(isSafeRow);
+    const looksLike = queryLooksLikeSafeFilter(sqlN);
+
+    if(allSafe && looksLike){
+      setStatus("ok", "Concluído ✅");
+      outputText.textContent =
+        "Boa. Você separou só o que é seguro e comeu pra recuperar força.\n\nCapítulo 1 concluído.";
+
+      storyText.innerHTML =
+        `Você come as frutas seguras e sente a energia voltando.
+        <br><br>
+        No chão, entre folhas, você acha um mapa rasgado… e decide seguir viagem.`;
+
+      nextCard.hidden = false;
+      nextCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
     }
-    if(!hasComestivelFilter(sqlN)){
-      return fail(
-        "Você usou WHERE, mas não filtrou o comestivel.\n" +
-        "Dica: WHERE comestivel = 1"
-      );
-    }
-    return successStep2(rows);
+
+    ok("Você fez uma seleção, mas ainda não ficou claro que separou só as frutas seguras.");
+    return;
   }
-});
+}
+
+// ==========================
+// Execução principal
+// ==========================
+
+function runSQL(){
+  const raw = sqlInput.value.trim();
+  const sqlN = normalize(raw);
+
+  if(!sqlN) return fail("...");
+
+  if(sqlN.startsWith("select")) return runSelect(raw, sqlN);
+
+  fail("Nesse capítulo, o terminal só responde SELECT.");
+}
+
+// ==========================
+// Eventos
+// ==========================
+
+runBtn.addEventListener("click", runSQL);
 
 resetBtn.addEventListener("click", () => {
+  etapa = 1;
   sqlInput.value = "";
   setStatus("", "Aguardando comando...");
-  outputText.textContent = "Digite um SELECT para continuar.";
-
-  etapa = 1;
-  missionText.innerHTML =
-    "<b>MISSÃO:</b> Descubra quais frutas você encontrou. Comece listando o conteúdo da tabela.";
-
+  outputText.textContent = "...";
+  hintText.textContent = "O terminal está pronto.";
+  missionText.innerHTML = "<b>MISSÃO:</b> Use o terminal pra entender o que tem nesse cesto.";
   nextCard.hidden = true;
 
-  resultWrap.style.display = "none";
-  emptyState.style.display = "block";
-  resultHead.innerHTML = "";
-  resultBody.innerHTML = "";
+  storyText.innerHTML =
+    `Você acorda no meio da mata, fraco e com fome. Depois de caminhar entre as árvores,
+    encontra um cesto com frutas e um terminal antigo coberto de folhas.
+    <br><br>
+    O terminal parece ter registros em uma tabela chamada <b>frutas_encontradas</b>.
+    Nem tudo é seguro. Você precisa sobreviver.`;
+
+  resetResult();
 });
 
 nextBtn.addEventListener("click", () => {
-  alert("Capítulo 2 (UPDATE) vem depois 😄\nQuando tu mandar, eu faço ele no mesmo estilo!");
+  // ajusta pro teu caminho real do capítulo 2
+  window.location.href = "/capitulo2/index.html";
 });
 
-// começa sem mostrar resultados (estilo SQL Island)
-resultWrap.style.display = "none";
-emptyState.style.display = "block";
+// estado inicial
+resetResult();
 sqlInput.value = "";
